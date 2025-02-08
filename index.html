@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stripe Payment</title>
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        #payment-form { max-width: 400px; margin: auto; padding: 20px; }
+        #card-element { border: 1px solid #ccc; padding: 10px; }
+        #submit { background-color: blue; color: white; padding: 10px; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h2>Pay with Stripe</h2>
+    <form id="payment-form">
+        <div id="card-element"></div>
+        <button id="submit">Pay</button>
+    </form>
+    <p id="payment-status"></p>
+
+    <script>
+        // Use your own Publishable Key here
+        const stripe = Stripe("pk_test_51Qq6qqHf81Hq3K775zPbbJuYLK0NBgFlOXD9lTBX3fgM5uQmSlMgKEplnpW4SXyyUOIqjP5v8JSbZFqKEOgKnGWt00HiQBrVlK");
+        const elements = stripe.elements();
+        const card = elements.create("card");
+        card.mount("#card-element");
+
+        // Handle form submission
+        document.getElementById("payment-form").addEventListener("submit", async (event) => {
+            event.preventDefault();
+            document.getElementById("submit").innerText = "Processing...";
+
+            // Call backend to create payment intent
+            const response = await fetch("http://localhost:5000/create-payment-intent", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ amount: 1000, currency: "usd" }) // Amount in cents (e.g., $10 = 1000)
+            });
+
+            const { clientSecret } = await response.json();
+
+            // Confirm card payment using the client secret
+            const result = await stripe.confirmCardPayment(clientSecret, {
+                payment_method: { card: card }
+            });
+
+            if (result.error) {
+                document.getElementById("payment-status").innerText = result.error.message;
+            } else {
+                document.getElementById("payment-status").innerText = "Payment successful!";
+            }
+
+            document.getElementById("submit").innerText = "Pay";
+        });
+    </script>
+</body>
+</html>
